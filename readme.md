@@ -1,6 +1,13 @@
 # Social
 ======
 
+[![Build Status](https://travis-ci.org/dammyammy/social.png)](https://travis-ci.org/dammyammy/social)
+
+
+## Requirements 
+
+* PHP => 5.4+
+
 > Domain	=> http://mobilexserver.com
 > Port	=> 8989
 
