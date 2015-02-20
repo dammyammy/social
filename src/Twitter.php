@@ -11,14 +11,21 @@ use Abraham\TwitterOAuth\TwitterOAuthException;
 
 class Twitter implements Social {
 
-	private function authenticate($account)
+	private function authenticate($account = getenv('TWITTER_DEFAULT_ACCOUNT'))
 	{
-		$config = useTwitterCredentialsOf($account);
+		try 
+		{
+			$config = useTwitterCredentialsOf($account);
 
-		return new TwitterOAuth($config['CONSUMER_KEY'], $config['CONSUMER_SECRET'], $config['ACCESS_TOKEN'], $config['ACCESS_SECRET']);
+			return new TwitterOAuth($config['CONSUMER_KEY'], $config['CONSUMER_SECRET'], $config['ACCESS_TOKEN'], $config['ACCESS_SECRET']);
+		}
+		catch(TwitterOAuthException $e)
+		{
+			throw new CouldNotConnect;
+		}
 	}
 
-	public function post($msg = 'Getting My Hands Wet Again! #Developer', $account = 'evc')
+	public function post($msg = 'Getting My Hands Wet Again! #Developer', $account = getenv('TWITTER_DEFAULT_ACCOUNT'))
 	{
 		try
 		{
@@ -58,20 +65,9 @@ class Twitter implements Social {
 			]);
 
 		}
-		catch(TwitterOAuthException $e)
-		{
-			throw new CouldNotConnect;
-		}
 		catch(\RuntimeException $e)
 		{
-
-			$errorMsg = substr($e->getMessage(), 0, 29) . '(s)' . substr($e->getMessage(), 59);
-
-			return json_encode([
-				'status' => 'error', 
-				'message' => 'Authentication Parameters Not Provided', 
-				'info' => 'Provide ' . $errorMsg . ' in the .env file in the project root. If None Create the file'
-			]);
+			return $this->runtimeErrorMsg();			
 		}
 	}
 
@@ -96,50 +92,103 @@ class Twitter implements Social {
 		return $twitter->post('statuses/update', array('status' => trim($msg) ));
 	}
 
-	protected function searchTweets($q, $account)
+	protected function searchTweets($q, $account = getenv('TWITTER_DEFAULT_ACCOUNT'))
 	{
-		$twitter = $this->authenticate($account);
+		try
+		{
+			$twitter = $this->authenticate($account);
 
-		return $twitter->get('search/tweets', array('q' => urlencode($q) ));
+			return json_encode($twitter->get('search/tweets', array('q' => urlencode($q) )), true);
+		}
+		catch(\RuntimeException $e)
+		{
+			return $this->runtimeErrorMsg();			
+		}
 	}
 
-	public function readTweets($screen_name, $account, $limit)
+	public function readTweets($screen_name, $account = getenv('TWITTER_DEFAULT_ACCOUNT'), $limit)
 	{
-		$twitter = $this->authenticate($account);
+		try
+		{
+			$twitter = $this->authenticate($account);
 
-		return $twitter->get('statuses/user_timeline', array('screen_name' => trim($screen_name), 'count' => $limit  ));
+			return json_encode($twitter->get('statuses/user_timeline', array('screen_name' => trim($screen_name), 'count' => $limit )), true);
+		}
+		catch(\RuntimeException $e)
+		{
+			return $this->runtimeErrorMsg();			
+		}
 	}
 
-	public function getMentions($account, $limit, $date = null)
+	public function getMentions($account = getenv('TWITTER_DEFAULT_ACCOUNT'), $limit, $date = null)
 	{
-		$date = (is_null($date)) ? mktime(0, 0, 0, date("m")-1, date("d"),   date("Y"))
-								 : $date;
+		try
+		{
+			$date = (is_null($date)) ? mktime(0, 0, 0, date("m")-1, date("d"),   date("Y"))
+									 : $date;
 
-		$twitter = $this->authenticate($account);
+			$twitter = $this->authenticate($account);
 
-		return $twitter->get('statuses/mentions_timeline', array('since_id' => $date, 'count' => $limit ));;
+			return json_encode($twitter->get('statuses/mentions_timeline', array('since_id' => $date, 'count' => $limit )), true);
+		}
+		catch(\RuntimeException $e)
+		{
+			return $this->runtimeErrorMsg();			
+		}
 	}
 
-	public function rateLimitStatus($account, $resources = 'help,users,search,statuses')
+	public function rateLimitStatus($account = getenv('TWITTER_DEFAULT_ACCOUNT'), $resources = 'help,users,search,statuses')
 	{
+		try
+		{
+			$twitter = $this->authenticate($account);
 
-		$twitter = $this->authenticate($account);
-
-		return $twitter->get('application/rate_limit_status', array('resources' => $resources));;
+			return json_encode($twitter->get('application/rate_limit_status', array('resources' => $resources)), true);
+		}
+		catch(\RuntimeException $e)
+		{
+			return $this->runtimeErrorMsg();			
+		}
 	}
 
-	public function getTimeline($account)
+	public function getTimeline($account = getenv('TWITTER_DEFAULT_ACCOUNT'))
 	{
-		$twitter = $this->authenticate($account);
+		try
+		{
+			$twitter = $this->authenticate($account);
 
-		return $twitter->get('statuses/home_timeline');
+			return json_encode($twitter->get('statuses/home_timeline'),true);
+		}
+		catch(\RuntimeException $e)
+		{
+			return $this->runtimeErrorMsg();			
+		}
 	}
 
-	public function getRetweets($account)
+	public function getRetweets($account = getenv('TWITTER_DEFAULT_ACCOUNT'))
 	{
-		$twitter = $this->authenticate($account);
+		try
+		{
+			$twitter = $this->authenticate($account);
 
-		return $twitter->get('statuses/retweets_of_me');
+			return json_encode($twitter->get('statuses/retweets_of_me'), true);
+
+		}
+		catch(\RuntimeException $e)
+		{
+			return $this->runtimeErrorMsg();			
+		}
+	}
+
+	private function runtimeErrorMsg()
+	{
+		$errorMsg = substr($e->getMessage(), 0, 29) . '(s)' . substr($e->getMessage(), 59);
+
+		return json_encode([
+			'status' => 'error', 
+			'message' => 'Authentication Parameters Not Provided', 
+			'info' => 'Provide ' . $errorMsg . ' in the .env file in the project root. If None Create the file'
+		]);
 	}
 
 }

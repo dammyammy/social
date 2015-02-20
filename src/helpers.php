@@ -5,6 +5,7 @@ require "vendor/autoload.php";
 try 
 {
 	Dotenv::load(__DIR__ . '../../../../..');
+	Dotenv::required('TWITTER_DEFAULT_ACCOUNT');
 } 
 catch(\InvalidArgumentException $e){
 	
@@ -19,7 +20,7 @@ catch(\InvalidArgumentException $e){
 
 
 
-function useTwitterCredentialsOf($account = 'EVC')
+function useTwitterCredentialsOf($account = getenv('TWITTER_DEFAULT_ACCOUNT'))
 {
 
 	$accounts = explode(',', getenv('TWITTER_ACCOUNTS'));
